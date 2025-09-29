@@ -1,6 +1,6 @@
 fun main() {
     do {
-        println("\n=== LU DELIVERY ===")
+        println("\nLU DELIVERY")
         println("1. Cadastrar Item")
         println("2. Atualizar Item")
         println("3. Criar Pedido")
