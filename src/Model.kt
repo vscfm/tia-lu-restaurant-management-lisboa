@@ -1,6 +1,4 @@
-
-// Lógica de negócio e estrutura de dados
-
+// Representação de um item do cardápio
 data class Item(
     val codigo: Int,
     var nome: String,
@@ -9,10 +7,12 @@ data class Item(
     var quantidade: Int
 )
 
+// Representação do status do pedido
 enum class StatusPedido {
     ACEITO, FAZENDO, FEITO, ESPERANDO_ENTREGADOR, SAIU_PARA_ENTREGA, ENTREGUE
 }
 
+// Representação de um pedido
 data class Pedido(
     val codigo: Int,
     val item: Item,
@@ -25,64 +25,45 @@ data class Pedido(
 val itens = mutableListOf<Item>()
 val pedidos = mutableListOf<Pedido>()
 
-// Contadores de código
-var codigoAtualItem = 1
-var codigoAtualPedido = 1
+// Variáveis de controle
+var codigoItemAtual = 1
+var codigoPedidoAtual = 1
 
-
-// Funções de gerenciamento de itens
-
+// Função para cadastrar item
 fun cadastrarItem(nome: String, descricao: String, preco: Double, quantidade: Int): Item {
-    val item = Item(codigoAtualItem++, nome, descricao, preco, quantidade)
+    val item = Item(codigoItemAtual++, nome, descricao, preco, quantidade)
     itens.add(item)
     return item
 }
 
-fun atualizarItem(
-    codigo: Int,
-    novoNome: String?,
-    novaDescricao: String?,
-    novoPreco: Double?,
-    novaQtd: Int?
-): Boolean {
-    val item = itens.find { it.codigo == codigo } ?: return false
-    novoNome?.takeIf { it.isNotBlank() }?.let { item.nome = it }
-    novaDescricao?.takeIf { it.isNotBlank() }?.let { item.descricao = it }
-    novoPreco?.takeIf { it >= 0 }?.let { item.preco = it }
-    novaQtd?.takeIf { it >= 0 }?.let { item.quantidade = it }
-    return true
+// Função para atualizar item
+fun atualizarItem(item: Item, nome: String?, descricao: String?, preco: Double?, quantidade: Int?) {
+    nome?.takeIf { it.isNotBlank() }?.let { item.nome = it }
+    descricao?.takeIf { it.isNotBlank() }?.let { item.descricao = it }
+    preco?.takeIf { it >= 0 }?.let { item.preco = it }
+    quantidade?.takeIf { it >= 0 }?.let { item.quantidade = it }
 }
 
-fun listarItens(): String {
-    return if (itens.isEmpty()) "Nenhum item cadastrado."
-    else itens.joinToString("\n") {
-        "Código ${it.codigo} - ${it.nome}: ${it.descricao} (R$ ${"%.2f".format(it.preco)}, ${it.quantidade} unid)"
-    }
+// Função para criar pedido
+fun criarPedido(item: Item, quantidade: Int, desconto: Double): Pedido? {
+    if (quantidade <= 0 || quantidade > item.quantidade) return null
+    val precoTotal = item.preco * quantidade
+    val precoFinal = precoTotal - (precoTotal * desconto)
+    val pedido = Pedido(codigoPedidoAtual++, item, quantidade, StatusPedido.ACEITO, precoFinal)
+    pedidos.add(pedido)
+    item.quantidade -= quantidade
+    return pedido
 }
 
-
-// Funções de gerenciamento de pedidos
-
-
-fun criarPedido(codItem: Int, qtd: Int, cupom: Boolean = false): String {
-    val item = itens.find { it.codigo == codItem } ?: return "Erro: item não encontrado."
-    if (qtd <= 0) return "Erro: quantidade inválida."
-    if (qtd > item.quantidade) return "Erro: estoque insuficiente."
-
-    val desconto = if (cupom) 0.1 else 0.0
-    val precoFinal = item.preco * qtd * (1 - desconto)
-
-    pedidos.add(Pedido(codigoAtualPedido++, item, qtd, StatusPedido.ACEITO, precoFinal))
-    item.quantidade -= qtd
-    return "Pedido criado! Valor final: R$ ${"%.2f".format(precoFinal)}"
-}
-
-fun atualizarPedido(codigo: Int, novoStatus: StatusPedido): String {
-    val pedido = pedidos.find { it.codigo == codigo } ?: return "Erro: pedido não encontrado."
+// Função para atualizar status de um pedido
+fun atualizarStatusPedido(pedido: Pedido, novoStatus: StatusPedido) {
     pedido.status = novoStatus
-    return "Status atualizado para $novoStatus!"
 }
 
-fun consultarPedidos(filtro: StatusPedido?): List<Pedido> {
-    return if (filtro == null) pedidos else pedidos.filter { it.status == filtro }
+// Função para consultar pedidos por status
+fun consultarPedidosPorStatus(status: StatusPedido?): List<Pedido> {
+    return when (status) {
+        null -> pedidos
+        else -> pedidos.filter { it.status == status }
+    }
 }
