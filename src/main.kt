@@ -1,8 +1,6 @@
 fun main() {
-    var opcao: String
-
     do {
-        println("LU DELIVERY")
+        println("\n=== LU DELIVERY ===")
         println("1. Cadastrar Item")
         println("2. Atualizar Item")
         println("3. Criar Pedido")
@@ -10,92 +8,178 @@ fun main() {
         println("5. Consultar Pedidos")
         println("0. Sair")
         print("Escolha uma opção: ")
-        opcao = readln()
 
+        val opcao = readln()
         when (opcao) {
+
+            // CADASTRAR ITEM
             "1" -> {
-                print("Nome: ")
-                val nome = readln().uppercase()
+                print("Nome (ou 0 para cancelar): ")
+                val nome = readln()
+                if (nome == "0") continue
+
                 print("Descrição: ")
-                val desc = readln()
-                print("Preço: ")
-                val preco = readln().replace(',', '.').toDoubleOrNull() ?: 0.0
-                print("Quantidade: ")
-                val qtd = readln().toIntOrNull() ?: 0
+                val descricao = readln()
 
-                val item = cadastrarItem(nome, desc, preco, qtd)
-                println("Item cadastrado: $item")
+                print("Preço (ou 0 para cancelar): ")
+                val preco = readln().replace(',', '.').toDoubleOrNull()
+                if (preco == null) {
+                    println("Preço inválido. Operação cancelada.")
+                    continue
+                }
+
+                print("Quantidade em estoque (ou 0 para cancelar): ")
+                val quantidade = readln().toIntOrNull()
+                if (quantidade == null) {
+                    println("Quantidade inválida. Operação cancelada.")
+                    continue
+                }
+
+                val item = cadastrarItem(nome.uppercase(), descricao, preco, quantidade)
+                println("Item cadastrado com sucesso! Código: ${item.codigo}")
             }
 
+            // ATUALIZAR ITEM
             "2" -> {
-                println(listarItens())
-                print("Código do item a atualizar: ")
-                val cod = readln().toIntOrNull()
-                if (cod != null) {
-                    print("Novo nome (enter para manter): ")
-                    val novoNome = readln().ifBlank { null }
-                    print("Nova descrição (enter para manter): ")
-                    val novaDesc = readln().ifBlank { null }
-                    print("Novo preço (enter para manter): ")
-                    val novoPreco = readln().toDoubleOrNull()
-                    print("Nova quantidade (enter para manter): ")
-                    val novaQtd = readln().toIntOrNull()
-
-                    val resultado = if (atualizarItem(cod, novoNome, novaDesc, novoPreco, novaQtd))
-                        "Item atualizado!"
-                    else "Erro: item não encontrado."
-                    println(resultado)
+                if (itens.isEmpty()) {
+                    println("Nenhum item cadastrado.")
+                    continue
                 }
+
+                println("Itens cadastrados:")
+                itens.forEach { println("Código ${it.codigo} - ${it.nome} (R$ ${"%.2f".format(it.preco)}, ${it.quantidade} unid)") }
+
+                print("Digite o código do item para atualizar (ou 0 para cancelar): ")
+                val cod = readln().toIntOrNull()
+                if (cod == 0 || cod == null) continue
+
+                val item = itens.find { it.codigo == cod }
+                if (item == null) {
+                    println("Item não encontrado!")
+                    continue
+                }
+
+                print("Novo nome (${item.nome}) ou Enter para manter: ")
+                val novoNome = readln().ifBlank { null }
+
+                print("Nova descrição (${item.descricao}) ou Enter para manter: ")
+                val novaDesc = readln().ifBlank { null }
+
+                print("Novo preço (${item.preco}) ou Enter para manter: ")
+                val novoPreco = readln().replace(',', '.').toDoubleOrNull()
+
+                print("Nova quantidade (${item.quantidade}) ou Enter para manter: ")
+                val novaQtd = readln().toIntOrNull()
+
+                atualizarItem(item, novoNome, novaDesc, novoPreco, novaQtd)
+                println("Item atualizado com sucesso!")
             }
 
+            // CRIAR PEDIDO
             "3" -> {
-                println(listarItens())
-                print("Código do item: ")
+                if (itens.isEmpty()) {
+                    println("Nenhum item disponível.")
+                    continue
+                }
+
+                println("Itens disponíveis:")
+                itens.forEach { println("Código ${it.codigo} - ${it.nome} (R$ ${"%.2f".format(it.preco)}, ${it.quantidade} unid)") }
+
+                print("Digite o código do item (ou 0 para cancelar): ")
                 val cod = readln().toIntOrNull()
-                print("Quantidade: ")
-                val qtd = readln().toIntOrNull() ?: 0
-                print("Possui cupom? (S/N): ")
-                val cupom = readln().equals("S", true)
+                if (cod == 0 || cod == null) continue
 
-                val resultado = criarPedido(cod ?: -1, qtd, cupom)
-                println(resultado)
-            }
+                val item = itens.find { it.codigo == cod }
+                if (item == null || item.quantidade <= 0) {
+                    println("Item inválido ou sem estoque!")
+                    continue
+                }
 
-            "4" -> {
-                if (pedidos.isEmpty()) println("Nenhum pedido registrado.")
-                else {
-                    pedidos.forEach { println("Pedido ${it.codigo}: ${it.item.nome} (${it.quantidade} unid) - ${it.status}") }
-                    print("Código do pedido a atualizar: ")
-                    val cod = readln().toIntOrNull()
-                    if (cod != null) {
-                        println("Escolha novo status:")
-                        StatusPedido.values().forEachIndexed { i, s -> println("${i + 1} - $s") }
-                        val escolha = readln().toIntOrNull()
-                        val status = escolha?.let { StatusPedido.values().getOrNull(it - 1) }
-                        val resultado = if (status != null) atualizarPedido(cod, status) else "Erro: status inválido."
-                        println(resultado)
-                    }
+                print("Quantidade (ou 0 para cancelar): ")
+                val qtd = readln().toIntOrNull()
+                if (qtd == null || qtd == 0) continue
+
+                print("Possui cupom de desconto? (S/N): ")
+                val cupom = readln()
+                val desconto = if (cupom.equals("S", true)) 0.1 else 0.0
+
+                val pedido = criarPedido(item, qtd, desconto)
+                if (pedido == null) {
+                    println("Erro ao criar pedido!")
+                } else {
+                    println("Pedido criado com sucesso! Valor final: R$ ${"%.2f".format(pedido.precoFinal)}")
                 }
             }
 
+            // ATUALIZAR PEDIDO
+            "4" -> {
+                if (pedidos.isEmpty()) {
+                    println("Nenhum pedido registrado.")
+                    continue
+                }
+
+                println("Pedidos:")
+                pedidos.forEach { println("Código ${it.codigo} - ${it.item.nome} (${it.quantidade} unid) - Status: ${it.status}") }
+
+                print("Digite o código do pedido (ou 0 para cancelar): ")
+                val cod = readln().toIntOrNull()
+                if (cod == 0 || cod == null) continue
+
+                val pedido = pedidos.find { it.codigo == cod }
+                if (pedido == null) {
+                    println("Pedido não encontrado!")
+                    continue
+                }
+
+                println("Escolha novo status (ou 0 para cancelar):")
+                StatusPedido.values().forEachIndexed { i, s -> println("${i + 1} - $s") }
+                val escolha = readln().toIntOrNull()
+                if (escolha == 0 || escolha == null) continue
+
+                val novoStatus = StatusPedido.values().getOrNull(escolha - 1)
+                if (novoStatus == null) {
+                    println("Opção inválida!")
+                } else {
+                    atualizarStatusPedido(pedido, novoStatus)
+                    println("Status atualizado com sucesso!")
+                }
+            }
+
+            // CONSULTAR PEDIDOS
             "5" -> {
-                println("Consultar pedidos:")
+                if (pedidos.isEmpty()) {
+                    println("Nenhum pedido registrado.")
+                    continue
+                }
+
+                println("Consultar pedidos por status:")
+                println("0 - Cancelar")
                 println("1 - Todos")
                 StatusPedido.values().forEachIndexed { i, s -> println("${i + 2} - $s") }
-                val escolha = readln().toIntOrNull()
-                val filtro = when (escolha) {
+
+                val opc = readln().toIntOrNull()
+                if (opc == 0 || opc == null) continue
+
+                val status = when (opc) {
                     1 -> null
-                    in 2..(StatusPedido.values().size + 1) -> StatusPedido.values()[escolha!! - 2]
+                    in 2..(StatusPedido.values().size + 1) -> StatusPedido.values()[opc - 2]
                     else -> null
                 }
-                val lista = consultarPedidos(filtro)
-                if (lista.isEmpty()) println("Nenhum pedido encontrado.")
-                else lista.forEach {
-                    println("Pedido ${it.codigo}: ${it.item.nome} (${it.quantidade} unid) - ${it.status}")
+
+                val lista = consultarPedidosPorStatus(status)
+                if (lista.isEmpty()) {
+                    println("Nenhum pedido encontrado para este status.")
+                } else {
+                    lista.forEach { println("Pedido ${it.codigo} - ${it.item.nome} (${it.quantidade} unid) - Status: ${it.status}") }
                 }
             }
 
-            "0" -> println("Encerrando sistema...")
+            // SAIR
+            "0" -> {
+                println("Encerrando o sistema...")
+                break
+            }
+
             else -> println("Opção inválida!")
         }
     } while (opcao != "0")
